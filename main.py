@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+from datetime import datetime
 from typing import Any
 
 import streamlit as st
@@ -61,6 +62,25 @@ with st.sidebar:
     Это интеллектуальный помощник на базе GigaChat API.
     Вы можете задавать любые вопросы и получать развернутые ответы.
     """)
+
+    st.markdown("---")
+
+    # Экспорт чата
+    if st.button("📥 Экспорт чата в Markdown"):
+        lines = ["# Чат с AI-ассистентом\n"]
+        lines.append(f"_Экспортировано: {datetime.now().strftime('%Y-%m-%d %H:%M')}_\n")
+        for msg in st.session_state.messages:
+            role = "Пользователь" if msg["role"] == "user" else "Ассистент"
+            content = msg.get("content", "")
+            if isinstance(content, str):
+                lines.append(f"### {role}\n{content}\n")
+        md_content = "\n".join(lines)
+        st.download_button(
+            label="💾 Скачать .md файл",
+            data=md_content,
+            file_name=f"chat_{datetime.now().strftime('%Y%m%d_%H%M')}.md",
+            mime="text/markdown",
+        )
 
     st.markdown("---")
     st.markdown("🛠️ Разработано с ❤️ для вас")
