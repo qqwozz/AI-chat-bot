@@ -9,6 +9,7 @@ from PIL import Image
 CLIENT_ID = os.environ.get("GIGACHAT_CLIENT_ID", "")
 SECRET = os.environ.get("GIGACHAT_SECRET", "")
 GIGACHAT_API_URL = "https://gigachat.devices.sberbank.ru/api/v1"
+VERIFY_SSL = os.environ.get("GIGACHAT_VERIFY_SSL", "true").lower() == "true"
 
 
 def get_access_token():
@@ -21,7 +22,7 @@ def get_access_token():
     data = {"scope": "GIGACHAT_API_PERS"}
     auth = requests.auth.HTTPBasicAuth(CLIENT_ID, SECRET.split(':')[1])
     try:
-        response = requests.post(url, headers=headers, data=data, auth=auth, verify=False)
+        response = requests.post(url, headers=headers, data=data, auth=auth, verify=VERIFY_SSL)
         response.raise_for_status()
         return response.json().get("access_token")
     except Exception as e:
@@ -45,7 +46,7 @@ def generate_image(prompt: str, access_token: str):
     }
 
     try:
-        response = requests.post(url, headers=headers, json=payload, verify=False)
+        response = requests.post(url, headers=headers, json=payload, verify=VERIFY_SSL)
         response.raise_for_status()
         content = response.json()["choices"][0]["message"]["content"]
 
@@ -56,7 +57,7 @@ def generate_image(prompt: str, access_token: str):
 
         file_id = img_tag["src"]
         image_url = f"{GIGACHAT_API_URL}/files/{file_id}/content"
-        image_response = requests.get(image_url, headers=headers, verify=False)
+        image_response = requests.get(image_url, headers=headers, verify=VERIFY_SSL)
         image_response.raise_for_status()
 
         return Image.open(BytesIO(image_response.content))
@@ -81,7 +82,7 @@ def send_prompt(prompt: str, access_token: str):
         }
 
         try:
-            response = requests.post(url, headers=headers, json=payload, verify=False)
+            response = requests.post(url, headers=headers, json=payload, verify=VERIFY_SSL)
             response.raise_for_status()
             return response.json()["choices"][0]["message"]["content"]
         except Exception as e:
