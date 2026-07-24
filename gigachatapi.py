@@ -1,5 +1,9 @@
+from __future__ import annotations
+
 import os
 import logging
+from typing import Optional
+
 import requests
 import uuid
 from io import BytesIO
@@ -35,7 +39,7 @@ def _trim_messages(messages: list[dict]) -> list[dict]:
     return result
 
 
-def get_access_token():
+def get_access_token() -> Optional[str]:
     url = "https://ngw.devices.sberbank.ru:9443/api/v2/oauth"
     headers = {
         "Content-Type": "application/x-www-form-urlencoded",
@@ -53,7 +57,7 @@ def get_access_token():
         return None
 
 
-def generate_image(prompt: str, access_token: str):
+def generate_image(prompt: str, access_token: str) -> Optional[Image.Image]:
     url = f"{GIGACHAT_API_URL}/chat/completions"
     headers = {
         "Authorization": f"Bearer {access_token}",
@@ -94,7 +98,7 @@ def is_image_request(prompt: str) -> bool:
     return any(word in prompt.lower() for word in IMAGE_KEYWORDS)
 
 
-def send_prompt(messages: list[dict], access_token: str):
+def send_prompt(messages: list[dict], access_token: str) -> Optional[str | Image.Image]:
     """
     Отправляет список сообщений в GigaChat API с ограничением контекста.
 

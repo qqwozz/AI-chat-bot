@@ -1,4 +1,8 @@
+from __future__ import annotations
+
 import logging
+from typing import Any
+
 import streamlit as st
 from gigachatapi import get_access_token, send_prompt, generate_image, is_image_request
 from time import sleep
@@ -19,7 +23,7 @@ st.set_page_config(
 )
 
 # Стили CSS для улучшения внешнего вида
-def local_css(file_name):
+def local_css(file_name: str) -> None:
     with open(file_name) as f:
         st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
 
@@ -65,7 +69,7 @@ with st.sidebar:
 chat_container = st.container()
 
 # Анимация ввода сообщения
-def animate_message(message, role):
+def animate_message(message: str, role: str) -> str:
     with chat_container:
         if role == "user":
             message_placeholder = st.empty()
