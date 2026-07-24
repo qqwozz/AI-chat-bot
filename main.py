@@ -5,7 +5,7 @@ from datetime import datetime
 from typing import Any
 
 import streamlit as st
-from gigachatapi import get_access_token, send_prompt, generate_image, is_image_request, AVAILABLE_MODELS
+from gigachatapi import get_access_token, send_prompt, send_prompt_stream, generate_image, is_image_request, AVAILABLE_MODELS
 from time import sleep
 import random
 
@@ -203,16 +203,24 @@ if prompt := st.chat_input("Введите ваш вопрос..."):
             if msg["role"] in ("user", "assistant") and isinstance(msg.get("content"), str):
                 api_messages.append({"role": msg["role"], "content": msg["content"]})
 
-        typing_emojis = ["✍️", "💭", "🧠", "🤔", "⌨️"]
-        with st.spinner(f"{random.choice(typing_emojis)} Обрабатываю ваш запрос..."):
-            model = st.session_state.get("selected_model", "GigaChat")
-            response = send_prompt(api_messages, st.session_state.access_token, model)
+        model = st.session_state.get("selected_model", "GigaChat")
 
-            if response:
-                assistant_message = animate_message(response, "assistant")
-                st.session_state.messages.append({"role": "assistant", "content": assistant_message})
-            else:
-                st.session_state.messages.append({
-                    "role": "assistant",
-                    "content": "Произошла ошибка при обработке запроса"
-                })
+        # Streaming: отображаем ответ по мере генерации
+        with chat_container:
+            message_placeholder = st.empty()
+            full_response = ""
+            try:
+                for chunk in send_prompt_stream(api_messages, st.session_state.access_token, model):
+                    full_response += chunk
+                    message_placeholder.markdown(f"""
+                    <div class="assistant-message">
+                        <div class="message-content">
+                            {full_response}
+                        </div>
+                    </div>
+                    """, unsafe_allow_html=True)
+            except Exception as e:
+                logger.error("Streaming error: %s", e)
+                full_response = "Произошла ошибка при обработке запроса"
+
+            st.session_state.messages.append({"role": "assistant", "content": full_response})

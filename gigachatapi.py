@@ -2,8 +2,9 @@ from __future__ import annotations
 
 import os
 import logging
+import json
 import time
-from typing import Optional
+from typing import Optional, Generator
 
 import requests
 import uuid
@@ -165,3 +166,51 @@ def send_prompt(messages: list[dict], access_token: str, model: str = "GigaChat"
     except Exception as e:
         logger.error("Ошибка при запросе к GigaChat: %s", e)
         return None
+
+
+def send_prompt_stream(
+    messages: list[dict], access_token: str, model: str = "GigaChat"
+) -> Generator[str, None, None]:
+    """
+    Отправляет запрос в GigaChat API и генерирует чанки ответа по мере поступления (SSE).
+    """
+    trimmed = _trim_messages(messages)
+
+    url = f"{GIGACHAT_API_URL}/chat/completions"
+    headers = {
+        "Authorization": f"Bearer {access_token}",
+        "Content-Type": "application/json",
+    }
+    payload = {
+        "model": model,
+        "messages": trimmed,
+        "temperature": 0.7,
+        "stream": True,
+    }
+
+    try:
+        response = requests.post(
+            url, headers=headers, json=payload, verify=VERIFY_SSL, stream=True, timeout=60
+        )
+        response.raise_for_status()
+
+        for line in response.iter_lines():
+            if not line:
+                continue
+            decoded = line.decode("utf-8")
+            if not decoded.startswith("data: "):
+                continue
+            data = decoded[6:]
+            if data.strip() == "[DONE]":
+                break
+            try:
+                chunk = json.loads(data)
+                delta = chunk["choices"][0].get("delta", {})
+                content = delta.get("content")
+                if content:
+                    yield content
+            except (json.JSONDecodeError, KeyError, IndexError):
+                continue
+    except Exception as e:
+        logger.error("Ошибка при streaming-запросе к GigaChat: %s", e)
+        yield ""
