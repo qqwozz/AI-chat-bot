@@ -15,6 +15,8 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+MAX_MESSAGE_LENGTH = 2000
+
 # Настройка страницы
 st.set_page_config(
     page_title="AI Чат-бот",
@@ -166,6 +168,10 @@ with chat_container:
 
 # Обработка ввода пользователя
 if prompt := st.chat_input("Введите ваш вопрос..."):
+    if len(prompt) > MAX_MESSAGE_LENGTH:
+        st.warning(f"Сообщение слишком длинное ({len(prompt)} символов). Максимум: {MAX_MESSAGE_LENGTH}.")
+        st.stop()
+
     user_message = animate_message(prompt, "user")
     st.session_state.messages.append({"role": "user", "content": user_message})
 
