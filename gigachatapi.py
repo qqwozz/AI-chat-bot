@@ -1,12 +1,13 @@
+import os
 import requests
 import uuid
 from io import BytesIO
 from bs4 import BeautifulSoup
 from PIL import Image
 
-# Настройки API
-CLIENT_ID = ''
-SECRET = ''
+# Настройки API — читаются из переменных окружения
+CLIENT_ID = os.environ.get("GIGACHAT_CLIENT_ID", "")
+SECRET = os.environ.get("GIGACHAT_SECRET", "")
 GIGACHAT_API_URL = "https://gigachat.devices.sberbank.ru/api/v1"
 
 
