@@ -1,5 +1,5 @@
 import streamlit as st
-from gigachatapi import get_access_token, send_prompt, generate_image
+from gigachatapi import get_access_token, send_prompt, generate_image, is_image_request
 from time import sleep
 import random
 
@@ -16,7 +16,7 @@ def local_css(file_name):
     with open(file_name) as f:
         st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
 
-local_css("style.css")  # Создайте файл style.css в той же директории
+local_css("style.css")
 
 # Инициализация сессии
 if "messages" not in st.session_state:
@@ -41,16 +41,16 @@ if "access_token" not in st.session_state:
         if not st.session_state.access_token:
             st.error("Не удалось получить токен доступа. Проверьте настройки.")
             st.stop()
-        sleep(1)  # Для плавности анимации
+        sleep(1)
 
 # Боковая панель с информацией
 with st.sidebar:
     st.markdown("## 📌 О чат-боте")
     st.markdown("""
-    Это интеллектуальный помощник на базе GigaChat API. 
+    Это интеллектуальный помощник на базе GigaChat API.
     Вы можете задавать любые вопросы и получать развернутые ответы.
     """)
-    
+
     st.markdown("---")
     st.markdown("🛠️ Разработано с ❤️ для вас")
 
@@ -59,25 +59,6 @@ chat_container = st.container()
 
 # Анимация ввода сообщения
 def animate_message(message, role):
-    """
-    Анимирует отображение сообщения в интерфейсе чата с эффектом постепенного появления текста.
-    
-    Функция разбивает входное сообщение на слова и отображает их последовательно с паузой,
-    имитируя эффект набора текста. Стиль и скорость анимации зависят от роли отправителя:
-    - Сообщения от 'user' отображаются быстрее (пауза 0.05с) с уникальным стилем
-    - Сообщения от 'assistant' отображаются медленнее (пауза 0.03с) с альтернативным стилем
-    
-    Параметры:
-        message (str): Полный текст сообщения для анимации
-        role (str): Роль отправителя ("user" или "assistant"), определяющая стиль и скорость анимации
-    
-    Возвращает:
-        str: Полностью сформированный текст сообщения после завершения анимации
-    
-    Использует методы Streamlit empty() и markdown() для динамического обновления контента.
-    Зависит от предопределенных CSS-классов (.user-message, .assistant-message, .message-content)
-    для реализации стилей.
-    """
     with chat_container:
         if role == "user":
             message_placeholder = st.empty()
@@ -127,22 +108,16 @@ with chat_container:
                 </div>
             </div>
             """, unsafe_allow_html=True)
-            
-            # Если есть изображение - отображаем его
+
             if "image" in message:
                 st.image(message["image"], use_container_width=True)
 
-# Обработка ввода пользователя с улучшенным UI
+# Обработка ввода пользователя
 if prompt := st.chat_input("Введите ваш вопрос..."):
-    # Анимация ввода пользователя
     user_message = animate_message(prompt, "user")
     st.session_state.messages.append({"role": "user", "content": user_message})
-    
-    # Определяем, хочет ли пользователь сгенерировать изображение
-    generate_image_flag = any(keyword in prompt.lower() for keyword in ["нарисуй", "изображение", "картинку", "сгенерируй"])
-    
-    if generate_image_flag:
-        # Анимация "генерирую изображение..."
+
+    if is_image_request(prompt):
         with st.spinner("🎨 Генерирую изображение..."):
             image = generate_image(prompt, st.session_state.access_token)
 
@@ -157,15 +132,27 @@ if prompt := st.chat_input("Введите ваш вопрос..."):
                     st.image(image, caption=f"Изображение по запросу: '{prompt}'")
             else:
                 st.session_state.messages.append({
-                    "role": "assistant", 
+                    "role": "assistant",
                     "content": "Извините, не удалось сгенерировать изображение"
                 })
     else:
-        # Обычный текстовый запрос
+        # Собираем историю для API (только текстовые сообщения)
+        api_messages = [
+            {"role": "system", "content": "Ты полезный AI-ассистент. Отвечай на русском языке."}
+        ]
+        for msg in st.session_state.messages:
+            if msg["role"] in ("user", "assistant") and isinstance(msg.get("content"), str):
+                api_messages.append({"role": msg["role"], "content": msg["content"]})
+
         typing_emojis = ["✍️", "💭", "🧠", "🤔", "⌨️"]
         with st.spinner(f"{random.choice(typing_emojis)} Обрабатываю ваш запрос..."):
-            response = send_prompt(prompt, st.session_state.access_token)
-            
-            # Анимация ответа
-            assistant_message = animate_message(response, "assistant")
-            st.session_state.messages.append({"role": "assistant", "content": assistant_message})
+            response = send_prompt(api_messages, st.session_state.access_token)
+
+            if response:
+                assistant_message = animate_message(response, "assistant")
+                st.session_state.messages.append({"role": "assistant", "content": assistant_message})
+            else:
+                st.session_state.messages.append({
+                    "role": "assistant",
+                    "content": "Произошла ошибка при обработке запроса"
+                })
