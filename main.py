@@ -5,7 +5,7 @@ from datetime import datetime
 from typing import Any
 
 import streamlit as st
-from gigachatapi import get_access_token, send_prompt, generate_image, is_image_request
+from gigachatapi import get_access_token, send_prompt, generate_image, is_image_request, AVAILABLE_MODELS
 from time import sleep
 import random
 
@@ -62,6 +62,12 @@ with st.sidebar:
     Это интеллектуальный помощник на базе GigaChat API.
     Вы можете задавать любые вопросы и получать развернутые ответы.
     """)
+
+    st.markdown("---")
+
+    # Выбор модели
+    selected_model = st.selectbox("🧠 Модель", AVAILABLE_MODELS, index=0)
+    st.session_state.selected_model = selected_model
 
     st.markdown("---")
 
@@ -150,7 +156,8 @@ if prompt := st.chat_input("Введите ваш вопрос..."):
 
     if is_image_request(prompt):
         with st.spinner("🎨 Генерирую изображение..."):
-            image = generate_image(prompt, st.session_state.access_token)
+            model = st.session_state.get("selected_model", "GigaChat")
+            image = generate_image(prompt, st.session_state.access_token, model)
 
             if image:
                 st.session_state.messages.append({
@@ -177,7 +184,8 @@ if prompt := st.chat_input("Введите ваш вопрос..."):
 
         typing_emojis = ["✍️", "💭", "🧠", "🤔", "⌨️"]
         with st.spinner(f"{random.choice(typing_emojis)} Обрабатываю ваш запрос..."):
-            response = send_prompt(api_messages, st.session_state.access_token)
+            model = st.session_state.get("selected_model", "GigaChat")
+            response = send_prompt(api_messages, st.session_state.access_token, model)
 
             if response:
                 assistant_message = animate_message(response, "assistant")

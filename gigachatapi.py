@@ -29,6 +29,8 @@ BASE_DELAY = 1.0
 
 IMAGE_KEYWORDS = ["нарисуй", "изображение", "картинк", "нарисуйте", "сгенерируй"]
 
+AVAILABLE_MODELS = ["GigaChat", "GigaChat-Pro", "GigaChat-Lite"]
+
 
 def _request_with_retry(
     method: str,
@@ -92,14 +94,14 @@ def get_access_token() -> Optional[str]:
         return None
 
 
-def generate_image(prompt: str, access_token: str) -> Optional[Image.Image]:
+def generate_image(prompt: str, access_token: str, model: str = "GigaChat") -> Optional[Image.Image]:
     url = f"{GIGACHAT_API_URL}/chat/completions"
     headers = {
         "Authorization": f"Bearer {access_token}",
         "Content-Type": "application/json",
     }
     payload = {
-        "model": "GigaChat",
+        "model": model,
         "messages": [
             {"role": "system", "content": "Ты — художник, который создает изображения по описанию."},
             {"role": "user", "content": prompt}
@@ -133,7 +135,7 @@ def is_image_request(prompt: str) -> bool:
     return any(word in prompt.lower() for word in IMAGE_KEYWORDS)
 
 
-def send_prompt(messages: list[dict], access_token: str) -> Optional[str | Image.Image]:
+def send_prompt(messages: list[dict], access_token: str, model: str = "GigaChat") -> Optional[str | Image.Image]:
     """
     Отправляет список сообщений в GigaChat API с ограничением контекста.
 
@@ -141,7 +143,7 @@ def send_prompt(messages: list[dict], access_token: str) -> Optional[str | Image
     Возвращает ответ модели (str) или None при ошибке.
     """
     if messages and is_image_request(messages[-1].get("content", "")):
-        return generate_image(messages[-1]["content"], access_token)
+        return generate_image(messages[-1]["content"], access_token, model)
 
     trimmed = _trim_messages(messages)
 
@@ -151,7 +153,7 @@ def send_prompt(messages: list[dict], access_token: str) -> Optional[str | Image
         "Content-Type": "application/json",
     }
     payload = {
-        "model": "GigaChat",
+        "model": model,
         "messages": trimmed,
         "temperature": 0.7
     }
