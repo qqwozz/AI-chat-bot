@@ -1,96 +1,75 @@
 # GigaChat AI Assistant
 
-## 📌 О проекте
+Интерактивный чат-бот с мульти-диалогом и генерацией изображений на базе GigaChat API.
 
-GigaChat AI Assistant — это интерактивный веб-интерфейс для общения с AI-моделью GigaChat от Сбербанка. Проект реализован на Python с использованием Streamlit и предоставляет:
+## Возможности
 
-- 🗣️ Естественное взаимодействие на русском языке
-- 💡 Получение развернутых ответов на сложные вопросы
-- ✨ Плавные анимации ввода текста
-- 🔒 Безопасное соединение через OAuth 2.0
+- Мульти-диалог — бот помнит контекст разговора (до 4000 токенов)
+- Генерация изображений по текстовому описанию
+- Анимация набора текста
+- Адаптивный дизайн для мобильных устройств
 
-## 🚀 Быстрый старт
+## Быстрый старт
 
-### Предварительные требования
-- Python 3.8+
+### Требования
+
+- Python 3.10+
 - Аккаунт разработчика GigaChat ([регистрация](https://developers.sber.ru/))
 
 ### Установка
 
 ```bash
-git clone https://github.com/yourusername/gigachat-assistant.git
-cd gigachat-assistant
+git clone https://github.com/qqwozz/AI-chat-bot.git
+cd AI-chat-bot
 pip install -r requirements.txt
 ```
 
 ### Настройка
-1. Запишите свои коды в gigachatapi
 
-2. Запустите приложение:
+Создайте файл `.env` в корне проекта:
+
+```
+GIGACHAT_CLIENT_ID=ваш_client_id
+GIGACHAT_SECRET=ваш_secret
+GIGACHAT_VERIFY_SSL=true
+```
+
+### Запуск
+
 ```bash
-streamlit run app.py
+streamlit run main.py
 ```
 
-## 🖥️ Интерфейс
+### Тесты
 
-![Интерфейс приложения](https://via.placeholder.com/600x400?text=Chat+Interface+Preview)
-
-### Основные элементы:
-- **Основное окно чата** - история диалога
-- **Поле ввода** - для отправки сообщений
-- **Боковая панель** - информация о проекте
-
-## 🔧 Техническая реализация
-
-### Архитектура
-```mermaid
-graph TD
-    A[Пользователь] --> B[Streamlit UI]
-    B --> C[GigaChat API]
-    C --> D[Аутентификация]
-    D --> E[Обработка запросов]
-    E --> B
+```bash
+pytest tests/ -v
 ```
 
-### Ключевые модули:
-| Модуль | Назначение |
-|--------|------------|
-| `app.py` | Основной интерфейс Streamlit |
-| `gigachatapi.py` | Логика работы с API GigaChat |
-| `style.css` | Кастомные стили интерфейса |
+## Структура проекта
 
-## 📚 Документация API
-
-### Метод авторизации
-```python
-def get_access_token():
-    url = "https://ngw.devices.sberbank.ru:9443/api/v2/oauth"
-    headers = {
-        "Content-Type": "application/x-www-form-urlencoded",
-        "Accept": "application/json",
-        "RqUID": str(uuid.uuid4())
-    }
-    ...
+```
+AI-chat-bot/
+├── main.py              # Streamlit UI
+├── gigachatapi.py       # API-клиент GigaChat
+├── style.css            # Стили интерфейса
+├── requirements.txt     # Зависимости
+├── .env.example         # Шаблон переменных окружения
+├── tests/
+│   └── test_gigachatapi.py
+└── Dockerfile
 ```
 
-### Параметры запроса:
-| Параметр | Тип | Описание |
-|----------|-----|----------|
-| `scope` | str | Область доступа (GIGACHAT_API_PERS) |
-| `RqUID` | UUID | Уникальный идентификатор запроса |
+## Технологии
 
-## 🌟 Особенности
-- **Анимация набора текста** - имитация живого общения
-- **Контекст диалога** - сохранение истории в течение сессии
-- **Адаптивный дизайн** - корректное отображение на мобильных устройствах
+- **Python 3.10+** — основной язык
+- **Streamlit** — веб-интерфейс
+- **GigaChat API** — AI-модель от Сбербанка
+- **pytest** — тестирование
+- **GitHub Actions** — CI/CD
 
-## ⚠️ Ограничения
-- Лимит запросов к API
-- Требуется интернет-соединение
+## Контакты
 
-## 🤝 Контакты
-По вопросам сотрудничества:
 - Email: offconix@gmail.com
-- Telegram: @onixxed 
-- GitHub: [onix](https://github.com/oonixxxxx)
-```
+- Telegram: @onixxed
+- GitHub: [qqwozz](https://github.com/qqwozz)
