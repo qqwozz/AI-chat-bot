@@ -57,7 +57,7 @@
 
 /* Адаптивность */
 @media (max-width: 768px) {
-    .user-message .message-content, 
+    .user-message .message-content,
     .assistant-message .message-content {
         max-width: 85%;
     }
@@ -69,4 +69,31 @@
     max-width: 100%;
     margin-top: 10px;
     margin-bottom: 20px;
+}
+
+/* ═══════════════════════════════════════════
+   ТЁМНАЯ ТЕМА
+   ═══════════════════════════════════════════ */
+
+[data-theme="dark"] .header {
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+}
+
+[data-theme="dark"] .header h1 {
+    color: #e0e0e0 !important;
+}
+
+[data-theme="dark"] .header p {
+    color: #a0a0a0 !important;
+}
+
+[data-theme="dark"] .assistant-message .message-content {
+    background: linear-gradient(135deg, #2d2d44 0%, #3a3a5c 100%);
+    color: #e0e0e0;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+[data-theme="dark"] .stChatInput {
+    border-top-color: #333;
 }

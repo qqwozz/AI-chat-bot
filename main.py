@@ -30,6 +30,17 @@ def local_css(file_name: str) -> None:
 
 local_css("style.css")
 
+# Применение темы через JS
+def apply_theme() -> None:
+    theme = "dark" if st.session_state.get("dark_mode", False) else "light"
+    st.markdown(f"""
+    <script>
+        document.documentElement.setAttribute("data-theme", "{theme}");
+    </script>
+    """, unsafe_allow_html=True)
+
+apply_theme()
+
 # Инициализация сессии
 if "messages" not in st.session_state:
     st.session_state.messages = [{"role": "assistant", "content": "Привет! Я ваш AI помощник. Чем могу помочь сегодня? 😊"}]
@@ -70,6 +81,10 @@ with st.sidebar:
     st.session_state.selected_model = selected_model
 
     st.markdown("---")
+
+    # Тёмная тема
+    dark_mode = st.toggle("🌙 Тёмная тема", value=False)
+    st.session_state.dark_mode = dark_mode
 
     # Экспорт чата
     if st.button("📥 Экспорт чата в Markdown"):
