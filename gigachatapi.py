@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 import logging
+import time
 from typing import Optional
 
 import requests
@@ -22,7 +23,41 @@ VERIFY_SSL = os.environ.get("GIGACHAT_VERIFY_SSL", "true").lower() == "true"
 MAX_CONTEXT_TOKENS = 4000
 CHARS_PER_TOKEN = 4
 
+# Retry settings
+MAX_RETRIES = 3
+BASE_DELAY = 1.0
+
 IMAGE_KEYWORDS = ["нарисуй", "изображение", "картинк", "нарисуйте", "сгенерируй"]
+
+
+def _request_with_retry(
+    method: str,
+    url: str,
+    **kwargs,
+) -> requests.Response:
+    """Выполняет HTTP-запрос с повторными попытками и экспоненциальной задержкой."""
+    last_exc: Optional[Exception] = None
+    for attempt in range(1, MAX_RETRIES + 1):
+        try:
+            response = requests.request(method, url, verify=VERIFY_SSL, **kwargs)
+            # Повторяем только на серверных ошибках (5xx) и 429
+            if response.status_code >= 500 or response.status_code == 429:
+                raise requests.HTTPError(response=response)
+            return response
+        except (requests.ConnectionError, requests.Timeout) as e:
+            last_exc = e
+            delay = BASE_DELAY * (2 ** (attempt - 1))
+            logger.warning("Попытка %d/%d не удалась, повтор через %.1fс: %s", attempt, MAX_RETRIES, delay, e)
+            time.sleep(delay)
+        except requests.HTTPError as e:
+            if e.response is not None and (e.response.status_code >= 500 or e.response.status_code == 429):
+                last_exc = e
+                delay = BASE_DELAY * (2 ** (attempt - 1))
+                logger.warning("Попытка %d/%d: HTTP %d, повтор через %.1fс", attempt, MAX_RETRIES, e.response.status_code, delay)
+                time.sleep(delay)
+            else:
+                raise
+    raise last_exc  # type: ignore[misc]
 
 
 def _trim_messages(messages: list[dict]) -> list[dict]:
@@ -49,11 +84,11 @@ def get_access_token() -> Optional[str]:
     data = {"scope": "GIGACHAT_API_PERS"}
     auth = requests.auth.HTTPBasicAuth(CLIENT_ID, SECRET.split(':')[1])
     try:
-        response = requests.post(url, headers=headers, data=data, auth=auth, verify=VERIFY_SSL)
+        response = _request_with_retry("POST", url, headers=headers, data=data, auth=auth)
         response.raise_for_status()
         return response.json().get("access_token")
     except Exception as e:
-        logger.error("Ошибка при получении токена: %s", e)
+        logger.error("Не удалось получить токен после %d попыток: %s", MAX_RETRIES, e)
         return None
 
 
@@ -73,7 +108,7 @@ def generate_image(prompt: str, access_token: str) -> Optional[Image.Image]:
     }
 
     try:
-        response = requests.post(url, headers=headers, json=payload, verify=VERIFY_SSL)
+        response = _request_with_retry("POST", url, headers=headers, json=payload)
         response.raise_for_status()
         content = response.json()["choices"][0]["message"]["content"]
 
@@ -84,7 +119,7 @@ def generate_image(prompt: str, access_token: str) -> Optional[Image.Image]:
 
         file_id = img_tag["src"]
         image_url = f"{GIGACHAT_API_URL}/files/{file_id}/content"
-        image_response = requests.get(image_url, headers=headers, verify=VERIFY_SSL)
+        image_response = _request_with_retry("GET", image_url, headers=headers)
         image_response.raise_for_status()
 
         return Image.open(BytesIO(image_response.content))
@@ -122,7 +157,7 @@ def send_prompt(messages: list[dict], access_token: str) -> Optional[str | Image
     }
 
     try:
-        response = requests.post(url, headers=headers, json=payload, verify=VERIFY_SSL)
+        response = _request_with_retry("POST", url, headers=headers, json=payload)
         response.raise_for_status()
         return response.json()["choices"][0]["message"]["content"]
     except Exception as e:
