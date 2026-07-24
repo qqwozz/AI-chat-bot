@@ -18,8 +18,8 @@ MAX_MESSAGE_LENGTH = 2000
 
 # Настройка страницы
 st.set_page_config(
-    page_title="AI Чат-бот",
-    page_icon="🤖",
+    page_title="AI Assistant",
+    page_icon="◆",
     layout="wide",
     initial_sidebar_state="expanded"
 )
