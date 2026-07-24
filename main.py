@@ -5,9 +5,8 @@ from datetime import datetime
 from typing import Any
 
 import streamlit as st
-from gigachatapi import get_access_token, send_prompt, send_prompt_stream, generate_image, is_image_request, AVAILABLE_MODELS
+from gigachatapi import get_access_token, send_prompt_stream, generate_image, is_image_request, AVAILABLE_MODELS, MAX_CONTEXT_TOKENS
 from time import sleep
-import random
 
 logging.basicConfig(
     level=logging.INFO,
@@ -25,7 +24,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Стили CSS для улучшения внешнего вида
+# Стили CSS
 def local_css(file_name: str) -> None:
     with open(file_name) as f:
         st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
@@ -45,159 +44,145 @@ apply_theme()
 
 # Инициализация сессии
 if "messages" not in st.session_state:
-    st.session_state.messages = [{"role": "assistant", "content": "Привет! Я ваш AI помощник. Чем могу помочь сегодня? 😊"}]
+    st.session_state.messages = [{"role": "assistant", "content": "Привет! Я ваш AI помощник. Чем могу помочь сегодня?"}]
 
-# Красивое оформление заголовка
+# Заголовок
 st.markdown("""
     <div class="header">
-        <h1 style='text-align: center; color: #4a4a4a;'>
-            <span style='color: #6e48aa;'>AI</span> Чат-бот
-        </h1>
-        <p style='text-align: center; color: #7a7a7a;'>
-            Ваш интеллектуальный помощник на базе GigaChat
-        </p>
+        <h1>AI Assistant</h1>
+        <p>GigaChat-powered chatbot</p>
     </div>
 """, unsafe_allow_html=True)
 
-# Получение токена с индикатором загрузки
+# Получение токена
 if "access_token" not in st.session_state:
-    with st.spinner("🔐 Устанавливаем безопасное соединение..."):
+    with st.spinner("Connecting..."):
         st.session_state.access_token = get_access_token()
         if not st.session_state.access_token:
-            st.error("Не удалось получить токен доступа. Проверьте настройки.")
+            st.error("Failed to get access token. Check your .env settings.")
             st.stop()
-        sleep(1)
 
-# Боковая панель с информацией
+# Подсчёт токенов
+def estimate_tokens(messages: list[dict]) -> int:
+    total_chars = sum(len(m.get("content", "")) for m in messages if isinstance(m.get("content"), str))
+    return total_chars // 4
+
+# Боковая панель
 with st.sidebar:
-    st.markdown("## 📌 О чат-боте")
-    st.markdown("""
-    Это интеллектуальный помощник на базе GigaChat API.
-    Вы можете задавать любые вопросы и получать развернутые ответы.
-    """)
-
-    st.markdown("---")
+    st.markdown("## Settings")
 
     # Выбор модели
-    selected_model = st.selectbox("🧠 Модель", AVAILABLE_MODELS, index=0)
+    selected_model = st.selectbox("Model", AVAILABLE_MODELS, index=0)
     st.session_state.selected_model = selected_model
 
     st.markdown("---")
 
     # Тёмная тема
-    dark_mode = st.toggle("🌙 Тёмная тема", value=False)
+    dark_mode = st.toggle("Dark mode", value=False)
     st.session_state.dark_mode = dark_mode
 
+    st.markdown("---")
+
+    # Счётчик токенов
+    tokens_used = estimate_tokens(st.session_state.messages)
+    st.metric("Tokens used", f"{tokens_used}", f"/ {MAX_CONTEXT_TOKENS} limit")
+
+    st.markdown("---")
+
+    # Очистка чата
+    if st.button("Clear chat"):
+        st.session_state.messages = [{"role": "assistant", "content": "Chat cleared. How can I help?"}]
+        st.rerun()
+
     # Экспорт чата
-    if st.button("📥 Экспорт чата в Markdown"):
-        lines = ["# Чат с AI-ассистентом\n"]
-        lines.append(f"_Экспортировано: {datetime.now().strftime('%Y-%m-%d %H:%M')}_\n")
+    if st.button("Export chat"):
+        lines = ["# Chat Export\n"]
+        lines.append(f"_Exported: {datetime.now().strftime('%Y-%m-%d %H:%M')}_\n")
         for msg in st.session_state.messages:
-            role = "Пользователь" if msg["role"] == "user" else "Ассистент"
+            role = "You" if msg["role"] == "user" else "Assistant"
             content = msg.get("content", "")
             if isinstance(content, str):
                 lines.append(f"### {role}\n{content}\n")
         md_content = "\n".join(lines)
         st.download_button(
-            label="💾 Скачать .md файл",
+            label="Download .md",
             data=md_content,
             file_name=f"chat_{datetime.now().strftime('%Y%m%d_%H%M')}.md",
             mime="text/markdown",
         )
 
-    st.markdown("---")
-    st.markdown("🛠️ Разработано с ❤️ для вас")
-
 # Контейнер для чата
 chat_container = st.container()
 
-# Анимация ввода сообщения
-def animate_message(message: str, role: str) -> str:
+# Анимация сообщения пользователя
+def animate_user_message(message: str) -> str:
     with chat_container:
-        if role == "user":
-            message_placeholder = st.empty()
-            full_response = ""
-            for chunk in message.split():
-                full_response += chunk + " "
-                sleep(0.05)
-                message_placeholder.markdown(f"""
-                <div class="user-message">
-                    <div class="message-content">
-                        {full_response}
-                    </div>
-                </div>
-                """, unsafe_allow_html=True)
-        else:
-            message_placeholder = st.empty()
-            full_response = ""
-            for chunk in message.split():
-                full_response += chunk + " "
-                sleep(0.03)
-                message_placeholder.markdown(f"""
-                <div class="assistant-message">
-                    <div class="message-content">
-                        {full_response}
-                    </div>
-                </div>
-                """, unsafe_allow_html=True)
-        return full_response
+        placeholder = st.empty()
+        full = ""
+        for word in message.split():
+            full += word + " "
+            sleep(0.03)
+            placeholder.markdown(f"""
+            <div class="user-message">
+                <div class="message-content">{full}</div>
+            </div>
+            """, unsafe_allow_html=True)
+        return full
 
 
-# Отображение истории сообщений
+# Отображение истории
 with chat_container:
-    for message in st.session_state.messages:
+    for i, message in enumerate(st.session_state.messages):
         if message["role"] == "user":
             st.markdown(f"""
             <div class="user-message">
-                <div class="message-content">
-                    {message["content"]}
-                </div>
+                <div class="message-content">{message["content"]}</div>
             </div>
             """, unsafe_allow_html=True)
         else:
             st.markdown(f"""
             <div class="assistant-message">
-                <div class="message-content">
-                    {message["content"]}
-                </div>
+                <div class="message-content">{message["content"]}</div>
             </div>
             """, unsafe_allow_html=True)
+
+            # Кнопка копирования
+            if message["content"] and message["content"] != "Chat cleared. How can I help?":
+                st.code(message["content"], language=None)
 
             if "image" in message:
                 st.image(message["image"], use_container_width=True)
 
-# Обработка ввода пользователя
-if prompt := st.chat_input("Введите ваш вопрос..."):
+# Ввод пользователя
+if prompt := st.chat_input("Ask me anything..."):
     if len(prompt) > MAX_MESSAGE_LENGTH:
-        st.warning(f"Сообщение слишком длинное ({len(prompt)} символов). Максимум: {MAX_MESSAGE_LENGTH}.")
+        st.warning(f"Message too long ({len(prompt)} chars). Max: {MAX_MESSAGE_LENGTH}.")
         st.stop()
 
-    user_message = animate_message(prompt, "user")
+    user_message = animate_user_message(prompt)
     st.session_state.messages.append({"role": "user", "content": user_message})
 
     if is_image_request(prompt):
-        with st.spinner("🎨 Генерирую изображение..."):
+        with st.spinner("Generating image..."):
             model = st.session_state.get("selected_model", "GigaChat")
             image = generate_image(prompt, st.session_state.access_token, model)
 
             if image:
                 st.session_state.messages.append({
                     "role": "assistant",
-                    "content": f"Вот изображение по вашему запросу: '{prompt}'",
+                    "content": f"Here is your image: '{prompt}'",
                     "image": image
                 })
-
                 with chat_container:
-                    st.image(image, caption=f"Изображение по запросу: '{prompt}'")
+                    st.image(image, caption=f"Image: '{prompt}'")
             else:
                 st.session_state.messages.append({
                     "role": "assistant",
-                    "content": "Извините, не удалось сгенерировать изображение"
+                    "content": "Failed to generate image."
                 })
     else:
-        # Собираем историю для API (только текстовые сообщения)
         api_messages = [
-            {"role": "system", "content": "Ты полезный AI-ассистент. Отвечай на русском языке."}
+            {"role": "system", "content": "You are a helpful AI assistant. Answer in the same language as the user."}
         ]
         for msg in st.session_state.messages:
             if msg["role"] in ("user", "assistant") and isinstance(msg.get("content"), str):
@@ -205,22 +190,19 @@ if prompt := st.chat_input("Введите ваш вопрос..."):
 
         model = st.session_state.get("selected_model", "GigaChat")
 
-        # Streaming: отображаем ответ по мере генерации
         with chat_container:
-            message_placeholder = st.empty()
+            placeholder = st.empty()
             full_response = ""
             try:
                 for chunk in send_prompt_stream(api_messages, st.session_state.access_token, model):
                     full_response += chunk
-                    message_placeholder.markdown(f"""
+                    placeholder.markdown(f"""
                     <div class="assistant-message">
-                        <div class="message-content">
-                            {full_response}
-                        </div>
+                        <div class="message-content">{full_response}</div>
                     </div>
                     """, unsafe_allow_html=True)
             except Exception as e:
                 logger.error("Streaming error: %s", e)
-                full_response = "Произошла ошибка при обработке запроса"
+                full_response = "Error processing request."
 
             st.session_state.messages.append({"role": "assistant", "content": full_response})
