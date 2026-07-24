@@ -130,7 +130,7 @@ with chat_container:
             
             # Если есть изображение - отображаем его
             if "image" in message:
-                st.image(message["image"], use_column_width=True)
+                st.image(message["image"], use_container_width=True)
 
 # Обработка ввода пользователя с улучшенным UI
 if prompt := st.chat_input("Введите ваш вопрос..."):
@@ -144,19 +144,17 @@ if prompt := st.chat_input("Введите ваш вопрос..."):
     if generate_image_flag:
         # Анимация "генерирую изображение..."
         with st.spinner("🎨 Генерирую изображение..."):
-            image_url = generate_image(prompt, st.session_state.access_token)
-            
-            if image_url:
-                # Добавляем изображение в историю сообщений
+            image = generate_image(prompt, st.session_state.access_token)
+
+            if image:
                 st.session_state.messages.append({
-                    "role": "assistant", 
+                    "role": "assistant",
                     "content": f"Вот изображение по вашему запросу: '{prompt}'",
-                    "image": image_url
+                    "image": image
                 })
-                
-                # Отображаем изображение
+
                 with chat_container:
-                    st.image(image_url, caption=f"Изображение по запросу: '{prompt}'")
+                    st.image(image, caption=f"Изображение по запросу: '{prompt}'")
             else:
                 st.session_state.messages.append({
                     "role": "assistant", 
