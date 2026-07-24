@@ -1,7 +1,14 @@
+import logging
 import streamlit as st
 from gigachatapi import get_access_token, send_prompt, generate_image, is_image_request
 from time import sleep
 import random
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+)
+logger = logging.getLogger(__name__)
 
 # Настройка страницы
 st.set_page_config(

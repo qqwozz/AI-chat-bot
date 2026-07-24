@@ -1,9 +1,12 @@
 import os
+import logging
 import requests
 import uuid
 from io import BytesIO
 from bs4 import BeautifulSoup
 from PIL import Image
+
+logger = logging.getLogger(__name__)
 
 # Настройки API — читаются из переменных окружения
 CLIENT_ID = os.environ.get("GIGACHAT_CLIENT_ID", "")
@@ -46,7 +49,7 @@ def get_access_token():
         response.raise_for_status()
         return response.json().get("access_token")
     except Exception as e:
-        print(f"Ошибка при получении токена: {str(e)}")
+        logger.error("Ошибка при получении токена: %s", e)
         return None
 
 
@@ -82,7 +85,7 @@ def generate_image(prompt: str, access_token: str):
 
         return Image.open(BytesIO(image_response.content))
     except Exception as e:
-        print(f"Ошибка при генерации изображения: {str(e)}")
+        logger.error("Ошибка при генерации изображения: %s", e)
         return None
 
 
@@ -119,5 +122,5 @@ def send_prompt(messages: list[dict], access_token: str):
         response.raise_for_status()
         return response.json()["choices"][0]["message"]["content"]
     except Exception as e:
-        print(f"Ошибка при запросе к GigaChat: {str(e)}")
+        logger.error("Ошибка при запросе к GigaChat: %s", e)
         return None
